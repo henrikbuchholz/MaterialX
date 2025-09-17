@@ -49,12 +49,6 @@ void DebugOutput(const std::string& msg) {
 
 TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
 {
-#ifdef _WIN32
-    // Redirect std::cout to Visual Studio Debug Output
-    DebugStreambuf debugBuf;
-    std::streambuf* oldCoutBuf = std::cout.rdbuf(&debugBuf);
-#endif
-
     // Create document and load libraries
     mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();
 
@@ -257,9 +251,4 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
             }
         }
     }
-
-#ifdef _WIN32
-    // Restore original cout buffer
-    std::cout.rdbuf(oldCoutBuf);
-#endif
 }
