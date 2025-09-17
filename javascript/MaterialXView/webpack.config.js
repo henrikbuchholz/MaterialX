@@ -35,9 +35,18 @@ dirent = fs.readdirSync(openPbrMaterials).filter(
 let openMaterials = dirent
     .map((fileName) => ({ name: fileName, value: `${openPbrMaterialsBaseURL}/${fileName}` }));
 
+const adskMaterials = "../../contrib/adsk/resources/Materials/TestSuite/adsklib/archviz";
+const adskMaterialsBaseURL = "Materials/TestSuite/adsklib/archviz";
+dirent = fs.readdirSync(adskMaterials).filter(
+    function (file) { if (file.lastIndexOf(".mtlx") > -1) return file; }
+)
+let adskMaterialsList = dirent
+    .map((fileName) => ({ name: fileName, value: `${adskMaterialsBaseURL}/${fileName}` }));
+
 materials = materials.concat(usdMaterials);
 materials = materials.concat(gltfMaterials);
 materials = materials.concat(openMaterials);
+materials = materials.concat(adskMaterialsList);
 
 const geometryFiles = "../../resources/Geometry";
 const geometryFilesURL = "Geometry";
@@ -81,6 +90,8 @@ module.exports = {
                 { from: usdSurfaceMaterials, to: usdSurfaceMaterialsBaseURL },
                 { from: gltfPbrMaterials, to: gltfPbrMaterialsBaseURL },
                 { from: openPbrMaterials, to: openPbrMaterialsBaseURL },
+                { from: adskMaterials, to: adskMaterialsBaseURL },
+                { from: "../../contrib/adsk/libraries", to: "libraries" },
                 { from: "../build/bin/JsMaterialXCore.wasm" },
                 { from: "../build/bin/JsMaterialXCore.js" },
                 { from: "../build/bin/JsMaterialXGenShader.wasm" },

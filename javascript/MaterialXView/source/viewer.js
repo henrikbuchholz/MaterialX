@@ -1545,6 +1545,31 @@ export class Viewer
         this.stdlib = this.mx.loadStandardLibraries(this.genContext);
         this.document.setDataLibrary(this.stdlib);
 
+        // Load ADSK contrib libraries
+        try {
+            const adskLibFiles = [
+                'libraries/adsklib/adsklib_defs.mtlx',
+                'libraries/adsklib/adsklib_ng.mtlx'
+            ];
+            for (const libFile of adskLibFiles) {
+                console.log('Loading ADSK library:', libFile);
+                const response = await fetch(libFile);
+                if (response.ok) {
+                    const libXml = await response.text();
+                    await this.mx.readFromXmlString(this.document, libXml, '');
+                    console.log('Successfully loaded:', libFile);
+                } else {
+                    console.error('Failed to fetch:', libFile, response.status);
+                }
+            }
+
+            // Verify ADSK nodes are available
+            const adskNodes = this.document.getNodeDefs().filter(nd => nd.getName().includes('adsk'));
+            console.log('ADSK nodes loaded:', adskNodes.map(nd => nd.getName()));
+        } catch (error) {
+            console.warn('Failed to load ADSK libraries:', error);
+        }
+
         this.initializeLighting(renderer, radianceTexture, irradianceTexture, lightRigXml);
 
         radianceTexture.mapping = THREE.EquirectangularReflectionMapping;
