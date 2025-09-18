@@ -160,7 +160,7 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
         mx::GenContext context(generator);
 
         // Set search path for GLSL includes
-        //context.registerSourceCodeSearchPath(searchPath);
+        context.registerSourceCodeSearchPath(searchPath);
 
         try {
             std::cout << "Attempting shader generation..." << std::endl;
