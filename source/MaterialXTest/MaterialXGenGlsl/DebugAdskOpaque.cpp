@@ -8,7 +8,10 @@
 #include <MaterialXCore/Document.h>
 #include <MaterialXFormat/Util.h>
 #include <MaterialXGenShader/GenContext.h>
+#include <MaterialXGenShader/Shader.h>
 #include <MaterialXGenGlsl/GlslShaderGenerator.h>
+#include <MaterialXGenGlsl/EsslShaderGenerator.h>
+
 
 #include <iostream>
 #ifdef _WIN32
@@ -47,66 +50,30 @@ void DebugOutput(const std::string& msg) {
 }
 #endif
 
+void loadAdskLib(mx::DocumentPtr doc)
+{
+    mx::FilePath adskLibPath = mx::FilePath("D:/Fluent/MaterialX/contrib/adsk/libraries/adsklib");
+    mx::FilePath adskDefFile = adskLibPath / "adsklib_defs.mtlx";
+    mx::FilePath adskNgFile = adskLibPath / "adsklib_ng.mtlx";
+
+    mx::readFromXmlFile(doc, adskDefFile);
+    mx::readFromXmlFile(doc, adskNgFile);
+}
+
 TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
 {
+
+
     // Create document and load libraries
     mx::FileSearchPath searchPath = mx::getDefaultDataSearchPath();
 
     // Add additional search paths for GLSL includes
-    searchPath.append(mx::FilePath("../libraries"));
-    searchPath.append(mx::FilePath("../../libraries"));
-    searchPath.append(mx::FilePath("libraries"));
     searchPath.append(mx::FilePath("D:/Fluent/MaterialX/libraries"));
 
     mx::DocumentPtr doc = mx::createDocument();
     mx::DocumentPtr stdlib = mx::createDocument();
     mx::loadLibraries({ "libraries" }, searchPath, stdlib);
     doc->setDataLibrary(stdlib);
-
-    // Debug: Print search paths
-    DebugOutput("Available search paths:");
-    for (size_t i = 0; i < searchPath.size(); ++i) {
-        DebugOutput("  [" + std::to_string(i) + "] " + searchPath[i].asString());
-    }
-
-    // Try multiple possible paths for ADSK libraries
-    std::vector<mx::FilePath> possiblePaths = {
-        mx::FilePath("contrib/adsk/libraries/adsklib"),
-        mx::FilePath("../contrib/adsk/libraries/adsklib"),
-        mx::FilePath("../../contrib/adsk/libraries/adsklib"),
-        mx::FilePath("D:/Fluent/MaterialX/contrib/adsk/libraries/adsklib")
-    };
-
-    // Also try relative to each search path
-    for (const auto& sp : searchPath) {
-        possiblePaths.push_back(sp / "contrib/adsk/libraries/adsklib");
-        possiblePaths.push_back(sp.getParentPath() / "contrib/adsk/libraries/adsklib");
-    }
-
-    mx::FilePath adskLibPath;
-    for (const auto& path : possiblePaths) {
-        mx::FilePath testFile = path / "adsklib_defs.mtlx";
-        std::cout << "Trying: " << testFile.asString() << " - ";
-        if (testFile.exists()) {
-            std::cout << "FOUND!" << std::endl;
-            adskLibPath = path;
-            break;
-        } else {
-            std::cout << "not found" << std::endl;
-        }
-    }
-
-    if (adskLibPath.isEmpty()) {
-        std::cout << "ERROR: Could not find ADSK libraries in any expected location" << std::endl;
-        std::cout << "Please ensure contrib/adsk/libraries/adsklib/adsklib_defs.mtlx exists" << std::endl;
-        REQUIRE(false);
-    }
-
-    mx::FilePath adskDefFile = adskLibPath / "adsklib_defs.mtlx";
-    mx::FilePath adskNgFile = adskLibPath / "adsklib_ng.mtlx";
-
-    mx::readFromXmlFile(doc, adskDefFile);
-    mx::readFromXmlFile(doc, adskNgFile);
 
     // Verify ADSK nodes loaded
     mx::vector<mx::NodeDefPtr> nodeDefs = doc->getNodeDefs();
@@ -119,42 +86,10 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
     }
     REQUIRE(adskNodeFound == true);
 
-    // Find the problematic material file using similar approach
-    std::vector<mx::FilePath> materialPossiblePaths = {
-        mx::FilePath("contrib/adsk/resources/Materials/TestSuite/adsklib/archviz"),
-        mx::FilePath("../contrib/adsk/resources/Materials/TestSuite/adsklib/archviz"),
-        mx::FilePath("../../contrib/adsk/resources/Materials/TestSuite/adsklib/archviz"),
-        mx::FilePath("D:/Fluent/MaterialX/contrib/adsk/resources/Materials/TestSuite/adsklib/archviz")
-    };
-
-    // Also try relative to each search path
-    for (const auto& sp : searchPath) {
-        materialPossiblePaths.push_back(sp / "contrib/adsk/resources/Materials/TestSuite/adsklib/archviz");
-        materialPossiblePaths.push_back(sp.getParentPath() / "contrib/adsk/resources/Materials/TestSuite/adsklib/archviz");
-    }
-
-    mx::FilePath materialPath;
-    for (const auto& path : materialPossiblePaths) {
-        mx::FilePath testFile = path / "adsk_opaque.mtlx";
-        std::cout << "Trying material: " << testFile.asString() << " - ";
-        if (testFile.exists()) {
-            std::cout << "FOUND!" << std::endl;
-            materialPath = path;
-            break;
-        } else {
-            std::cout << "not found" << std::endl;
-        }
-    }
-
-    if (materialPath.isEmpty()) {
-        std::cout << "ERROR: Could not find ADSK material file in any expected location" << std::endl;
-        std::cout << "Please ensure contrib/adsk/resources/Materials/TestSuite/adsklib/archviz/adsk_opaque.mtlx exists" << std::endl;
-        REQUIRE(false);
-    }
-
+    // Load adsk material file
+    auto materialPath = mx::FilePath("D:/Fluent/MaterialX/contrib/adsk/resources/Materials/TestSuite/adsklib/archviz");
     mx::FilePath materialFile = materialPath / "adsk_opaque.mtlx";
     std::cout << "Loading material from: " << materialFile.asString() << std::endl;
-
     mx::readFromXmlFile(doc, materialFile);
 
     // Find the materials (they are Node elements with category "material")
@@ -221,11 +156,11 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
         }
 
         // Create shader generator
-        mx::ShaderGeneratorPtr generator = mx::GlslShaderGenerator::create();
+        mx::ShaderGeneratorPtr generator = mx::EsslShaderGenerator::create();
         mx::GenContext context(generator);
 
         // Set search path for GLSL includes
-        context.registerSourceCodeSearchPath(searchPath);
+        //context.registerSourceCodeSearchPath(searchPath);
 
         try {
             std::cout << "Attempting shader generation..." << std::endl;
@@ -236,8 +171,8 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
             std::cout << "SUCCESS: Shader generated for " << materialName << std::endl;
 
             // Optionally print shaders
-            // std::cout << "Vertex:\n" << shader->getSourceCode(mx::Stage::VERTEX) << std::endl;
-            // std::cout << "Fragment:\n" << shader->getSourceCode(mx::Stage::PIXEL) << std::endl;
+            std::cout << "Vertex:\n" << shader->getSourceCode(mx::Stage::VERTEX) << std::endl;
+            std::cout << "Fragment:\n" << shader->getSourceCode(mx::Stage::PIXEL) << std::endl;
         }
         catch (const std::exception& e) {
             std::cout << "EXCEPTION for " << materialName << ": " << e.what() << std::endl;
