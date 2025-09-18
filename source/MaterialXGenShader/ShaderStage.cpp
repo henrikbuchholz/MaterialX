@@ -9,6 +9,7 @@
 #include <MaterialXGenShader/GenContext.h>
 #include <MaterialXGenShader/Syntax.h>
 #include <MaterialXGenShader/Util.h>
+#include <MaterialXGenShader/ConsoleLog.h>
 
 #include <MaterialXCore/Value.h>
 
@@ -343,6 +344,8 @@ void ShaderStage::addBlock(const string& str, const FilePath& sourceFilename, Ge
 
 void ShaderStage::addInclude(const FilePath& includeFilename, const FilePath& sourceFilename, GenContext& context)
 {
+    MX_LOG_CUSTOM("Adding include", sourceFilename.asString());
+
     string modifiedFile = includeFilename;
     tokenSubstitution(context.getShaderGenerator().getTokenSubstitutions(), modifiedFile);
     FilePath resolvedFile = context.resolveSourceFile(modifiedFile, sourceFilename.getParentPath());
@@ -352,6 +355,11 @@ void ShaderStage::addInclude(const FilePath& includeFilename, const FilePath& so
         string content = readFile(resolvedFile);
         if (content.empty())
         {
+            // Enhanced logging for missing include files
+            std::string errorMsg = "Could not find include file: '" + includeFilename.asString() + "'";
+            errorMsg += " (resolved to: '" + resolvedFile.asString() + "')";
+            MX_LOG_ERROR(errorMsg);
+
             throw ExceptionShaderGenError("Could not find include file: '" + includeFilename.asString() + "'");
         }
         _includes.insert(resolvedFile);

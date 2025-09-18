@@ -8,21 +8,10 @@
 #include <MaterialXGenShader/GenContext.h>
 #include <MaterialXGenShader/ShaderGenerator.h>
 #include <MaterialXGenShader/Util.h>
+#include <MaterialXGenShader/ConsoleLog.h>
 
 #include <iostream>
 #include <queue>
-
-#ifdef EMSCRIPTEN
-#include <emscripten/emscripten.h>
-
-// Inline logging functions to avoid symbol conflicts
-#define LOG_TO_CONSOLE(msg) EM_ASM({ console.log('MaterialX ShaderGraph: ' + UTF8ToString($0)); }, (msg).c_str())
-#define LOG_ERROR_TO_CONSOLE(msg) EM_ASM({ console.error('MaterialX ShaderGraph Error: ' + UTF8ToString($0)); }, (msg).c_str())
-#else
-// Fallback for non-Emscripten builds
-#define LOG_TO_CONSOLE(msg) std::cout << "MaterialX ShaderGraph: " << (msg) << std::endl
-#define LOG_ERROR_TO_CONSOLE(msg) std::cerr << "MaterialX ShaderGraph Error: " << (msg) << std::endl
-#endif
 
 MATERIALX_NAMESPACE_BEGIN
 
@@ -552,7 +541,7 @@ ShaderGraphPtr ShaderGraph::create(const ShaderGraph* parent, const string& name
             errorDetails += " (category: '" + node->getCategory() + "')";
             errorDetails += " (type: '" + node->getType() + "')";
 
-            LOG_ERROR_TO_CONSOLE(errorDetails);
+            MX_LOG_CUSTOM("ShaderGraph Error", errorDetails);
 
             throw ExceptionShaderGenError("Could not find a nodedef for node '" + node->getName() + "'");
         }
