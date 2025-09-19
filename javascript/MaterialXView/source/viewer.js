@@ -44,7 +44,7 @@ export class Scene
         const cameraFOV = 60.0;
         this._camera = new THREE.PerspectiveCamera(cameraFOV, aspectRatio, cameraNearDist, cameraFarDist);
         this._frame = 0;
-        
+
         this.#_gltfLoader = new GLTFLoader();
 
         this.#_normalMat = new THREE.Matrix3();
@@ -117,7 +117,7 @@ export class Scene
 
         console.log("- Scene load time: ", performance.now() - geomLoadTime, "ms");
 
-        // Always reset controls based on camera for each load. 
+        // Always reset controls based on camera for each load.
         orbitControls.reset();
         this.updateScene(viewer, orbitControls);
 
@@ -456,7 +456,7 @@ export class Scene
     #_rootNode = null;
 }
 
-/* 
+/*
     Property editor
 */
 export class Editor
@@ -630,6 +630,8 @@ export class Material
         doc.setDataLibrary(viewer.getLibrary());
         viewer.setDocument(doc);
 
+        this.document.importLibrary(viewer.adskLib);
+
         const fileloader = viewer.getFileLoader();
 
         let mtlxMaterial = await viewer.getMaterial().loadMaterialFile(fileloader, materialFilename);
@@ -648,7 +650,7 @@ export class Material
 
         // Load material
         if (mtlxMaterial)
-            try {                
+            try {
                 await mx.readFromXmlString(doc, mtlxMaterial, searchPath);
             }
             catch (error) {
@@ -690,7 +692,7 @@ export class Material
                         let newAssignment;
                         if (collection || geom)
                         {
-                            // Remove leading "/" from collection and geom for 
+                            // Remove leading "/" from collection and geom for
                             // later assignment comparison checking
                             if (collection && collection.charAt(0) == "/")
                             {
@@ -719,7 +721,7 @@ export class Material
         {
             // Search for any surface shaders. The first found
             // is assumed to be assigned to the entire scene
-            // The identifier used is "*" to mean the entire scene. 
+            // The identifier used is "*" to mean the entire scene.
             const materialNodes = doc.getMaterialNodes();
             let shaderList = [];
             let foundRenderable = false;
@@ -897,7 +899,7 @@ export class Material
         }
     }
 
-    // 
+    //
     // Generate a new material for a given element
     //
     generateMaterial(matassign, viewer, searchPath, closeUI)
@@ -921,7 +923,7 @@ export class Material
         var startTranspCheckTime = performance.now();
         const isTransparent = mx.isTransparentSurface(elem, gen.getTarget());
         genContext.getOptions().hwTransparency = isTransparent;
-        // Always set to complete. 
+        // Always set to complete.
         // Can consider option to set to reduced as the parsing of large numbers of uniforms (e.g. on shading models)
         // can be quite expensive.
         genContext.getOptions().shaderInterfaceType = mx.ShaderInterfaceType.SHADER_INTERFACE_COMPLETE;
@@ -1111,8 +1113,8 @@ export class Material
                     {
                         continue;
                     }
-                    
-                    // Skip non-input types and anything > 2 levels deep 
+
+                    // Skip non-input types and anything > 2 levels deep
                     if (!currentElem.asAInput() || currentElem.getNamePath().split('/').length > 2)
                     {
                         continue;
@@ -1206,7 +1208,7 @@ export class Material
                         }
                     }
 
-                    // Skip if already added to current folder 
+                    // Skip if already added to current folder
                     let found = false;
                     for (let i = 0; i < currentFolder.children.length; ++i)
                     {
@@ -1215,7 +1217,7 @@ export class Material
                             found = true;
                             break;
                         }
-                    }                        
+                    }
                     if (found)
                     {
                         continue;
@@ -1444,7 +1446,7 @@ export class Material
                                 color3.fromArray(material.uniforms[name].value);
                                 dummy.color = color3.getHex();
                                 let alphaValue = material.uniforms[name].value[3]; // Get alpha component
-                                
+
                                 // Add the RGB color picker as one item
                                 let colorPicker = currentFolder.addColor(dummy, 'color').name(path + '.rgb')
                                     .onChange(function (value)
@@ -1456,7 +1458,7 @@ export class Material
                                         material.uniforms[name].value[2] = color3.b;
                                     });
                                 colorPicker.domElement.classList.add('peditoritem');
-                                
+
                                 // Add the alpha slider as a separate item at the same level
                                 var alphaObj = { value: alphaValue };
                                 let alphaSlider = currentFolder.add(alphaObj, 'value', 0, 1, 0.01).name(path + '.alpha')
@@ -1509,7 +1511,7 @@ export class Material
 /*
     Viewer class
 
-    Keeps track of local scene, and property editor as well as current MaterialX document 
+    Keeps track of local scene, and property editor as well as current MaterialX document
     and associated material, shader and lighting information.
 */
 export class Viewer
@@ -1529,6 +1531,44 @@ export class Viewer
         this.hdrLoader = new RGBELoader();
     }
 
+    async importAdskLibrary(doc) {
+
+        this.adskLib = this.mx.createDocument();
+
+        // Load ADSK contrib libraries
+        try {
+            const adskLibFiles = [
+                'libraries/adsklib/adsk_colorcorrect.mtlx',
+                'libraries/adsklib/adsklib_3dwood_defs.mtlx',
+                'libraries/adsklib/adsklib_3dwood_ng.mtlx',
+                'libraries/adsklib/adsklib_defs.mtlx',
+                'libraries/adsklib/adsklib_legacy_defs.mtlx',
+                'libraries/adsklib/adsklib_legacy_ng.mtlx',
+                'libraries/adsklib/adsklib_ng.mtlx',
+                'libraries/adsklib/adsklib_tr_ng.mtlx',
+                'libraries/adsklib/genglsl/adsklib_genglsl_impl.mtlx',
+            ];
+            for (const libFile of adskLibFiles) {
+                console.log('Loading ADSK library:', libFile);
+                const response = await fetch(libFile);
+                if (response.ok) {
+                    const libXml = await response.text();
+                    const libDoc = this.mx.createDocument();
+                    await this.mx.readFromXmlString(libDoc, libXml, '');
+                    this.adskLib.importLibrary(libDoc);
+                } else {
+                    console.error('Failed to fetch:', libFile, response.status);
+                }
+            }
+
+            // Verify ADSK nodes are available
+            const adskNodes = this.document.getNodeDefs().filter(nd => nd.getName().includes('adsk'));
+            console.log('ADSK nodes loaded:', adskNodes.map(nd => nd.getName()));
+        } catch (error) {
+            console.warn('Failed to load ADSK libraries:', error);
+        }
+    }
+
     //
     // Create shader generator, generation context and "base" document which
     // contains the standard definition libraries and lighting elements.
@@ -1545,35 +1585,12 @@ export class Viewer
         this.stdlib = this.mx.loadStandardLibraries(this.genContext);
         this.document.setDataLibrary(this.stdlib);
 
-        // Load ADSK contrib libraries
-        try {
-            const adskLibFiles = [
-                'libraries/adsklib/adsklib_defs.mtlx',
-                'libraries/adsklib/adsklib_ng.mtlx'
-            ];
-            for (const libFile of adskLibFiles) {
-                console.log('Loading ADSK library:', libFile);
-                const response = await fetch(libFile);
-                if (response.ok) {
-                    const libXml = await response.text();
-                    await this.mx.readFromXmlString(this.document, libXml, '');
-                    console.log('Successfully loaded:', libFile);
-                } else {
-                    console.error('Failed to fetch:', libFile, response.status);
-                }
-            }
-
-            // Verify ADSK nodes are available
-            const adskNodes = this.document.getNodeDefs().filter(nd => nd.getName().includes('adsk'));
-            console.log('ADSK nodes loaded:', adskNodes.map(nd => nd.getName()));
-        } catch (error) {
-            console.warn('Failed to load ADSK libraries:', error);
-        }
-
         this.initializeLighting(renderer, radianceTexture, irradianceTexture, lightRigXml);
 
         radianceTexture.mapping = THREE.EquirectangularReflectionMapping;
         this.getScene().setBackgroundTexture(radianceTexture);
+
+        await this.importAdskLibrary(doc)
     }
 
     //
@@ -1675,7 +1692,7 @@ export class Viewer
         return this.irradianceTexture;
     }
 
-    // Three scene and materials. 
+    // Three scene and materials.
     scene = null;
     materials = [];
 
