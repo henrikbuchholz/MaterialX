@@ -9,6 +9,9 @@
 #include <iostream>
 #include <sstream>
 
+#include <MaterialXGenShader/ConsoleLog.h>
+
+
 #if defined(__APPLE__) && defined(BUILD_APPLE_FRAMEWORK)
     #include <dlfcn.h>
 #endif
@@ -79,6 +82,8 @@ void loadDocuments(const FilePath& rootPath, const FileSearchPath& searchPath, c
 
 void loadLibrary(const FilePath& file, DocumentPtr doc, const FileSearchPath& searchPath, const XmlReadOptions* readOptions)
 {
+    MX_LOG_DEBUG("Importing library: " + file.asString());
+
     DocumentPtr libDoc = createDocument();
     readFromXmlFile(libDoc, file, searchPath, readOptions);
     doc->importLibrary(libDoc);

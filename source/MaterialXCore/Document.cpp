@@ -4,6 +4,7 @@
 //
 
 #include <MaterialXCore/Document.h>
+#include <MaterialXGenShader/ConsoleLog.h>
 
 #include <mutex>
 
@@ -358,7 +359,7 @@ vector<OutputPtr> Document::getMaterialOutputs() const
 vector<NodeDefPtr> Document::getMatchingNodeDefs(const string& nodeName) const
 {
     // Recurse to data library if present.
-    vector<NodeDefPtr> matchingNodeDefs = hasDataLibrary() ? 
+    vector<NodeDefPtr> matchingNodeDefs = hasDataLibrary() ?
                                           getDataLibrary()->getMatchingNodeDefs(nodeName) :
                                           vector<NodeDefPtr>();
 
@@ -370,7 +371,7 @@ vector<NodeDefPtr> Document::getMatchingNodeDefs(const string& nodeName) const
     {
         matchingNodeDefs.insert(matchingNodeDefs.end(), _cache->nodeDefMap.at(nodeName).begin(), _cache->nodeDefMap.at(nodeName).end());
     }
-    
+
     return matchingNodeDefs;
 }
 
@@ -380,7 +381,7 @@ vector<InterfaceElementPtr> Document::getMatchingImplementations(const string& n
     vector<InterfaceElementPtr> matchingImplementations = hasDataLibrary() ?
                                                           getDataLibrary()->getMatchingImplementations(nodeDef) :
                                                           vector<InterfaceElementPtr>();
-    
+
     // Refresh the cache.
     _cache->refresh();
 
