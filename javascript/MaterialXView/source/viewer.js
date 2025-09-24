@@ -630,7 +630,7 @@ export class Material
         doc.setDataLibrary(viewer.getLibrary());
         viewer.setDocument(doc);
 
-        this.document.importLibrary(viewer.adskLib);
+        doc.importLibrary(viewer.adskLib);
 
         const fileloader = viewer.getFileLoader();
 
@@ -1531,7 +1531,7 @@ export class Viewer
         this.hdrLoader = new RGBELoader();
     }
 
-    async importAdskLibrary(doc) {
+    async importAdskLibrary() {
 
         this.adskLib = this.mx.createDocument();
 
@@ -1590,7 +1590,7 @@ export class Viewer
         radianceTexture.mapping = THREE.EquirectangularReflectionMapping;
         this.getScene().setBackgroundTexture(radianceTexture);
 
-        await this.importAdskLibrary(doc)
+        await this.importAdskLibrary();
     }
 
     //
