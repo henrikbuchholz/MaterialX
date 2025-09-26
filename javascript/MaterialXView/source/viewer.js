@@ -841,6 +841,10 @@ export class Material
             }
             matassign.setShader(shader);
             closeUI = true;
+
+// HACK: Only generate one to simplify debugging
+console.log("HACK: Only generating one shader to simplify debugging");
+break;
         }
         console.log("- Generate (", this._materials.length, ") shader(s) time: ", performance.now() - startGenTime, " ms.",);
 
@@ -848,6 +852,12 @@ export class Material
         this.updateMaterialAssignments(viewer, "");
 
         console.log("Total material time: ", (performance.now() - startTime), "ms");
+
+        // HACK: Expose global reload function for debugging
+        window.reloadMaterial = () => {
+            console.log("Reloading current material...");
+            this.loadMaterials(viewer, materialFilename);
+        };
     }
 
     //
