@@ -11,9 +11,12 @@
 #include <MaterialXGenShader/Shader.h>
 #include <MaterialXGenGlsl/GlslShaderGenerator.h>
 #include <MaterialXGenGlsl/EsslShaderGenerator.h>
+#include <MaterialXGenGlsl/WgslShaderGenerator.h>
 
 
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 #ifdef _WIN32
 #include <Windows.h>
 #include <sstream>
@@ -60,6 +63,36 @@ void loadAdskLib(mx::DocumentPtr doc)
     mx::readFromXmlFile(doc, adskNgFile);
 }
 
+void writeShaderToFile(const std::string& shaderCode, const std::string& filePath)
+{
+    // Create directory if it doesn't exist
+    std::filesystem::path path(filePath);
+    std::filesystem::create_directories(path.parent_path());
+
+    // Write shader code to file
+    std::ofstream file(filePath);
+    if (file.is_open()) {
+        file << shaderCode;
+        file.close();
+        std::cout << "Shader written to: " << filePath << std::endl;
+    } else {
+        std::cout << "ERROR: Could not write shader to: " << filePath << std::endl;
+    }
+}
+
+struct Config
+{
+    std::string materialFile;
+    std::string materialName;
+};
+
+const std::map<std::string, Config> Configs = {
+    { "metal", Config{"adsk_metal.mtlx", "Copper_Polished"} },
+    { "opaque", Config{ "adsk_opaque.mtlx", "Walnut" } },
+};
+
+auto config = Configs.at("opaque");
+
 TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
 {
 
@@ -88,7 +121,8 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
 
     // Load adsk material file
     auto materialPath = mx::FilePath("D:/Fluent/MaterialX/contrib/adsk/resources/Materials/TestSuite/adsklib/archviz");
-    mx::FilePath materialFile = materialPath / "adsk_opaque.mtlx";
+    //mx::FilePath materialFile = materialPath / "adsk_opaque.mtlx";
+    mx::FilePath materialFile = materialPath / config.materialFile;
     std::cout << "Loading material from: " << materialFile.asString() << std::endl;
     mx::readFromXmlFile(doc, materialFile);
 
@@ -106,7 +140,8 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
     }
 
     // Test each material separately
-    std::vector<std::string> materialNames = {"Walnut", "Walnut_Semigloss", "Plastic_Glossy_White"};
+    std::vector<std::string> materialNames = { config.materialName };
+    //{"Walnut", "Walnut_Semigloss", "Plastic_Glossy_White"};
 
     for (const std::string& materialName : materialNames) {
         std::cout << "\n=== Testing material: " << materialName << " ===" << std::endl;
@@ -156,7 +191,8 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
         }
 
         // Create shader generator
-        mx::ShaderGeneratorPtr generator = mx::EsslShaderGenerator::create();
+        //mx::ShaderGeneratorPtr generator = mx::EsslShaderGenerator::create();
+        mx::ShaderGeneratorPtr generator = mx::WgslShaderGenerator::create();
         mx::GenContext context(generator);
 
         // Set search path for GLSL includes
@@ -173,6 +209,14 @@ TEST_CASE("Debug ADSK Opaque Shader Generation", "[genglsl]")
             // Optionally print shaders
             std::cout << "Vertex:\n" << shader->getSourceCode(mx::Stage::VERTEX) << std::endl;
             std::cout << "Fragment:\n" << shader->getSourceCode(mx::Stage::PIXEL) << std::endl;
+
+            // Write shaders to files
+            const std::string outputDir = "D:/Fluent/MaterialX/generated_shaders/";
+            const std::string vertexFileName = outputDir + materialName + "_vertex.glsl";
+            const std::string fragmentFileName = outputDir + materialName + "_fragment.glsl";
+
+            writeShaderToFile(shader->getSourceCode(mx::Stage::VERTEX), vertexFileName);
+            writeShaderToFile(shader->getSourceCode(mx::Stage::PIXEL), fragmentFileName);
         }
         catch (const std::exception& e) {
             std::cout << "EXCEPTION for " << materialName << ": " << e.what() << std::endl;
